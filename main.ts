@@ -9,7 +9,7 @@
 // with full-size entries.
 //
 // This bot fishes for exactly those swings, and nothing else:
-//   - ENTRY: the close sits at least 0.5% below the trailing 60-bar high AND
+//   - ENTRY: the close sits at least 0.4% below the trailing 45-bar high AND
 //     the last 5 bars already bounce (+0.2% or more). The dip alone is not
 //     enough -- in a flat window most dips are dead cats that grind lower --
 //     and the bounce alone is not enough either, because buying a 5-bar
@@ -20,18 +20,22 @@
 //     stop below the running peak close (wide enough to survive the 0.5-0.7%
 //     wiggles inside a rebound, tight enough to keep the gain when the leg
 //     rolls over), and a 2.0% hard stop under cost as a backstop.
-//   - Nothing else trades. No entries in the first 60 bars (no trailing high
+//   - Nothing else trades. No entries in the first 45 bars (no trailing high
 //     yet), no shorts, no leverage, at most one order per batch.
 //
 // Tuned on the dev window with an exact replica of the harness fill model
 // (4 bps fee, 2 bps modelled slippage, constant-product impact against each
-// bar's open depth, fills at the next bar's open). A ~5,000-variant sweep over
-// dip/mean-reversion/ladder families picked this shape: it takes 2 round
-// trips on the dev window (buy bar 392 @ ~$64.1k, sell bar 513 @ ~$65.2k;
-// buy bar 568 @ ~$64.4k, sell bar 961 @ ~$65.4k) for about +$29 net PnL at
-// ~0.8% max drawdown -- comfortably above the $0 dev gate, below the +$44.60
-// live top-10 cutoff, so it races but does not promise a prize. The dev
-// window never decides the prize; the race window does.
+// bar's open depth, fills at the next bar's open). A ~7,000-variant sweep over
+// dip/mean-reversion/ladder/scale-in families picked this shape: it takes 2
+// full round trips on the dev window (buy bar 392 @ ~$64.1k, sell bar 513 @
+// ~$65.2k; buy bar 568 @ ~$64.4k, sell bar 961 @ ~$65.4k) plus a small late
+// third entry, for about +$30 net PnL at ~0.8% max drawdown -- comfortably
+// above the $0 dev gate, below the +$44.60 live top-10 cutoff, so it races
+// but does not promise a prize. The dev window never decides the prize; the
+// race window does. (The sweep plateaued at ~+$30: the +$44-51 leaders time
+// this window's exact troughs, e.g. buying the bar-486 trough right before
+// the +2.32% rally -- a timing no general rule reproduces, and chasing it
+// would be overfitting to the dev window, which cannot help the race.)
 
 import { runBars } from './vendor/makefun-bars.ts';
 import type { BarsState, Batch, OrderInput } from './vendor/makefun-bars.ts';
@@ -39,8 +43,8 @@ import type { BarsState, Batch, OrderInput } from './vendor/makefun-bars.ts';
 const SYMBOL = 'CBBTC';
 
 // How far the close must sit below the trailing high to count as a dip.
-const DIP_WINDOW_BARS = 60;
-const DIP_FRACTION = 0.005;
+const DIP_WINDOW_BARS = 45;
+const DIP_FRACTION = 0.004;
 // Bounce confirmation: 5-bar return must already be at least this positive.
 const BOUNCE_BARS = 5;
 const BOUNCE_MIN = 0.002;
